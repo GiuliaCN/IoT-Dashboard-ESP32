@@ -105,6 +105,8 @@ O Node-RED adiciona o timestamp do servidor, processa o estado da máquina e atu
 
 # Dashboard
 
+![Dashboard](docs/dashboard.png)
+
 O dashboard apresenta:
 
 * status atual da máquina;
