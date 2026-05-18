@@ -1,0 +1,405 @@
+[
+    {
+        "id": "e9659ae1b082b20b",
+        "type": "tab",
+        "label": "Fluxo 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "691df0931c9fc3c1",
+        "type": "http in",
+        "z": "e9659ae1b082b20b",
+        "name": "",
+        "url": "/sensor",
+        "method": "post",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 110,
+        "y": 140,
+        "wires": [
+            [
+                "39b4e69e05a83b56"
+            ]
+        ]
+    },
+    {
+        "id": "90c64821c69d5c79",
+        "type": "function",
+        "z": "e9659ae1b082b20b",
+        "name": "function Processar estado",
+        "func": "const data = msg.payload;\nconst agora = new Date();\n\nlet estadoAtual = context.get(\"estadoAtual\");\nlet ultimaMudanca = context.get(\"ultimaMudanca\");\nlet historico = context.get(\"historico\") || [];\nlet grafico = context.get(\"grafico\") || [];\nif (!ultimaMudanca) {\n    ultimaMudanca = agora.toISOString();\n    context.set(\"ultimaMudanca\", ultimaMudanca);\n}\n\nconst segundos = Math.floor(\n    (agora.getTime() - new Date(ultimaMudanca).getTime()) / 1000\n);\nconst primeiraLeitura = estadoAtual === undefined;\nconst mudou = !primeiraLeitura && data.vibrando !== estadoAtual;\n\nif (primeiraLeitura || mudou) {\n    estadoAtual = data.vibrando;\n    ultimaMudanca = agora.toISOString();\n\n    const evento = {\n        horario: agora.toLocaleTimeString(\"pt-BR\"),\n        evento: data.vibrando ? \"Ligou\" : \"Desligou\",\n        dispositivo: data.deviceId || \"maquina-01\"\n    };\n\n    historico.unshift(evento);\n    historico = historico.slice(0, 10);\n\n    context.set(\"estadoAtual\", estadoAtual);\n    context.set(\"ultimaMudanca\", ultimaMudanca);\n    context.set(\"historico\", historico);\n}\n\ngrafico.push({\n    x: agora.getTime(),\n    y: data.vibrando ? 1 : 0\n});\n\ngrafico = grafico.slice(-30);\ncontext.set(\"grafico\", grafico);\n\nconst statusMsg = {\n    payload: data.vibrando ? \"🟢 MÁQUINA LIGADA\" : \"🔴 MÁQUINA DESLIGADA\"\n};\n\nconst tempoMsg = {\n    payload: `${segundos} segundos no estado atual`\n};\n\nconst chartMsg = {\n    payload: data.vibrando ? 1 : 0,\n    topic: \"Vibração\"\n};\n\nconst historicoMsg = {\n    payload: historico\n};\n\nconst respostaHttpMsg = RED.util.cloneMessage(msg);\n\nrespostaHttpMsg.payload = {\n    ok: true,\n    status: data.vibrando ? \"LIGADA\" : \"DESLIGADA\",\n    tempoEstadoAtualSegundos: segundos\n};\n\nreturn [\n    { payload: data.vibrando ? \"🟢 MÁQUINA LIGADA\" : \"🔴 MÁQUINA DESLIGADA\" },\n    { payload: `${segundos} segundos no estado atual` },\n    { payload: data.vibrando ? 1 : 0, topic: \"Vibração\" },\n    { payload: historico },\n    respostaHttpMsg\n];",
+        "outputs": 5,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 140,
+        "wires": [
+            [
+                "c2c21db1daed4c5c"
+            ],
+            [
+                "9c27d6854f962f8d"
+            ],
+            [
+                "4fc91085041e65fb"
+            ],
+            [
+                "f4ddd42366a12399"
+            ],
+            [
+                "5ad6b68e46c0e56d"
+            ]
+        ]
+    },
+    {
+        "id": "5ad6b68e46c0e56d",
+        "type": "http response",
+        "z": "e9659ae1b082b20b",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 810,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "39b4e69e05a83b56",
+        "type": "json",
+        "z": "e9659ae1b082b20b",
+        "name": "",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 290,
+        "y": 140,
+        "wires": [
+            [
+                "90c64821c69d5c79",
+                "f4f7d5f05acb0688"
+            ]
+        ]
+    },
+    {
+        "id": "c2c21db1daed4c5c",
+        "type": "ui-text",
+        "z": "e9659ae1b082b20b",
+        "group": "9426ba01f3c59446",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "Status",
+        "label": "Status",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 810,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "9c27d6854f962f8d",
+        "type": "ui-text",
+        "z": "e9659ae1b082b20b",
+        "group": "9426ba01f3c59446",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "Tempo no estado",
+        "label": "Tempo",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 850,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "a32e558b6ba81e18",
+        "type": "inject",
+        "z": "e9659ae1b082b20b",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 360,
+        "y": 420,
+        "wires": [
+            [
+                "8d2b6e1d303e1dd2"
+            ]
+        ]
+    },
+    {
+        "id": "8d2b6e1d303e1dd2",
+        "type": "function",
+        "z": "e9659ae1b082b20b",
+        "name": "function \"Limpar contexto\"",
+        "func": "context.set(\"estadoAnterior\", undefined);\ncontext.set(\"ultimaMudanca\", undefined);\ncontext.set(\"historico\", []);\n\nmsg.payload = \"Contexto limpo\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 420,
+        "wires": [
+            [
+                "ec22d1ba425451e8"
+            ]
+        ]
+    },
+    {
+        "id": "ec22d1ba425451e8",
+        "type": "debug",
+        "z": "e9659ae1b082b20b",
+        "name": "debug Limpeza",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 840,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "4fc91085041e65fb",
+        "type": "ui-chart",
+        "z": "e9659ae1b082b20b",
+        "group": "9426ba01f3c59446",
+        "name": "Histórico de Vibração",
+        "label": "chart",
+        "order": 3,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "",
+        "xAxisPropertyType": "timestamp",
+        "xAxisType": "time",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "0 = parado | 1 = vibrando",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "ymin": "0",
+        "ymax": "1",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "false",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": 1,
+        "removeOlderUnit": "3600",
+        "removeOlderPoints": "",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": "4",
+        "className": "",
+        "interpolation": "step",
+        "x": 860,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f4f7d5f05acb0688",
+        "type": "debug",
+        "z": "e9659ae1b082b20b",
+        "name": "debug Entrada",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 500,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "f4ddd42366a12399",
+        "type": "ui-table",
+        "z": "e9659ae1b082b20b",
+        "group": "9426ba01f3c59446",
+        "name": "Histórico",
+        "label": "Histórico",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "maxrows": "5",
+        "passthru": false,
+        "autocols": true,
+        "showSearch": true,
+        "deselect": true,
+        "selectionType": "none",
+        "columns": [],
+        "mobileBreakpoint": "sm",
+        "mobileBreakpointType": "defaults",
+        "action": "replace",
+        "className": "",
+        "x": 820,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9426ba01f3c59446",
+        "type": "ui-group",
+        "name": "Máquina",
+        "page": "b90e50adbb850856",
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "b90e50adbb850856",
+        "type": "ui-page",
+        "name": "Monitoramento",
+        "ui": "03f53ebdc83b4f9c",
+        "path": "/monitoramento",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "360121afda0f3f6e",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "03f53ebdc83b4f9c",
+        "type": "ui-base",
+        "name": "My Dashboard",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": false
+    },
+    {
+        "id": "360121afda0f3f6e",
+        "type": "ui-theme",
+        "name": "Default Theme",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094CE",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "f8df6f58a20f5639",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@flowfuse/node-red-dashboard": "1.30.2"
+        }
+    }
+]
