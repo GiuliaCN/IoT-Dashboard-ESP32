@@ -1,14 +1,16 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-const char* ssid = "NOME_DO_WIFI";
-const char* password = "SENHA_DO_WIFI";
+const char* ssid = "Giulia";
+const char* password = "senha123";
 
 // IP do notebook na rede do hotspot
-const char* serverUrl = "http://192.168.43.100:1880/sensor";
+const char* serverUrl = "http://127.0.1.1:1880/sensor";
 
-const int sensorPin = 4; // ajuste conforme o GPIO usado
-bool ultimoEstado = false;
+const int sensorPin = 4;
+bool ultimoEstadoEnviado = false;
+unsigned long ultimoEnvio = 0;
+const unsigned long intervaloEnvio = 1000;
 
 void setup() {
   Serial.begin(115200);
@@ -30,15 +32,33 @@ void setup() {
 }
 
 void loop() {
-  bool vibrando = digitalRead(sensorPin) == HIGH;
+  bool vibrando = lerVibracaoSuavizada();
 
-  // Envia apenas quando o estado muda
-  if (vibrando != ultimoEstado) {
+  bool mudou = vibrando != ultimoEstadoEnviado;
+  bool passouTempo = millis() - ultimoEnvio >= intervaloEnvio;
+
+  if (mudou || passouTempo) {
     enviarEstado(vibrando);
-    ultimoEstado = vibrando;
+    ultimoEstadoEnviado = vibrando;
+    ultimoEnvio = millis();
+  }
+}
+
+bool lerVibracaoSuavizada() {
+  const int amostras = 20;
+  int leiturasAtivas = 0;
+
+  for (int i = 0; i < amostras; i++) {
+    if (digitalRead(sensorPin) == HIGH) {
+      leiturasAtivas++;
+    }
+
+    delay(5);
   }
 
-  delay(500);
+  // Se pelo menos 30% das leituras detectaram vibração,
+  // considera que está vibrando
+  return leiturasAtivas >= 6;
 }
 
 void enviarEstado(bool vibrando) {
